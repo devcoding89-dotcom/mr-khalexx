@@ -1,0 +1,155 @@
+import { useState, useEffect, useRef } from 'react';
+import { Phone, Gamepad2, Coins, ChevronRight, Flame, Sparkles, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ProductCard from '@/components/ProductCard';
+import { phones, codAccounts, codPoints, getFeaturedProducts, type Category } from '@/data/database';
+
+const categories = [
+  { id: 'featured' as const, name: 'Featured', icon: Flame, description: 'Handpicked best sellers' },
+  { id: 'phones' as Category, name: 'Phones', icon: Phone, description: 'Latest smartphones' },
+  { id: 'accounts' as Category, name: 'CoD Accounts', icon: Gamepad2, description: 'Pre-leveled accounts' },
+  { id: 'cp' as Category, name: 'CP Points', icon: Coins, description: 'Instant top-up' },
+];
+
+export default function Products() {
+  const [isVisible, setIsVisible] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const getProducts = (category: string) => {
+    switch (category) {
+      case 'featured':
+        return getFeaturedProducts();
+      case 'phones':
+        return phones;
+      case 'accounts':
+        return codAccounts;
+      case 'cp':
+        return codPoints;
+      default:
+        return getFeaturedProducts();
+    }
+  };
+
+  const scrollToCategory = (categoryId: string) => {
+    const element = document.querySelector(`#${categoryId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section ref={sectionRef} className="relative py-24 bg-[#0a0a0f]">
+      {/* Background Elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#FFD700]/5 rounded-full blur-[150px]" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-[#9333EA]/5 rounded-full blur-[150px]" />
+      </div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section Header */}
+        <div className={`text-center mb-16 transition-all duration-700 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <Badge className="mb-4 bg-white/5 text-[#FFD700] border-[#FFD700]/30">
+            <Sparkles className="w-3 h-3 mr-1" />
+            Our Products
+          </Badge>
+          <h2 className="text-4xl sm:text-5xl font-bold font-['Orbitron'] text-white mb-4">
+            EXPLORE OUR <span className="text-[#FFD700]">COLLECTION</span>
+          </h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            Browse our extensive collection of premium phones, Call of Duty accounts, and CP points. 
+            All products come with instant delivery and full warranty.
+          </p>
+        </div>
+
+        {/* Category Tabs */}
+        <Tabs defaultValue="featured" className="w-full">
+          <div className={`flex justify-center mb-12 transition-all duration-700 delay-100 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+            <TabsList className="bg-white/5 border border-white/10 p-1 rounded-xl">
+              {categories.map((category) => (
+                <TabsTrigger
+                  key={category.id}
+                  value={category.id}
+                  className="data-[state=active]:gradient-gold data-[state=active]:text-black px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white transition-all"
+                >
+                  <category.icon className="w-4 h-4 mr-2" />
+                  {category.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
+          {categories.map((category) => (
+            <TabsContent key={category.id} value={category.id} className="mt-0">
+              <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+                {/* Category Header */}
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h3 className="text-2xl font-bold text-white font-['Orbitron'] flex items-center gap-2">
+                      <category.icon className="w-6 h-6 text-[#FFD700]" />
+                      {category.name}
+                    </h3>
+                    <p className="text-gray-500 text-sm mt-1">{category.description}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => scrollToCategory(category.id)}
+                    className="text-[#FFD700] hover:text-[#FFD700] hover:bg-[#FFD700]/10"
+                  >
+                    View All
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+
+                {/* Products Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {getProducts(category.id).slice(0, 4).map((product, index) => (
+                    <ProductCard key={product.id} product={product} index={index} />
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* Trust Badges */}
+        <div className={`mt-20 grid grid-cols-2 md:grid-cols-4 gap-6 transition-all duration-700 delay-300 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {[
+            { icon: TrendingUp, title: 'Best Prices', desc: 'Competitive rates' },
+            { icon: Sparkles, title: 'Verified', desc: '100% authentic' },
+            { icon: Flame, title: 'Instant', desc: 'Immediate delivery' },
+            { icon: Gamepad2, title: 'Support', desc: '24/7 assistance' },
+          ].map((badge) => (
+            <div
+              key={badge.title}
+              className="glass rounded-xl p-6 text-center hover:bg-white/10 transition-colors group"
+            >
+              <badge.icon className="w-8 h-8 text-[#FFD700] mx-auto mb-3 group-hover:scale-110 transition-transform" />
+              <h4 className="text-white font-semibold mb-1">{badge.title}</h4>
+              <p className="text-gray-500 text-sm">{badge.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
