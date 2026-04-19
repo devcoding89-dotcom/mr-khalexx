@@ -11,7 +11,6 @@ max_rows = 1000
 
 [auth]
 enabled = true
-port = 54322
 site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
@@ -29,5 +28,4 @@ major_version = 15
 
 [storage]
 enabled = true
-port = 54325
 file_size_limit = "50MiB"
