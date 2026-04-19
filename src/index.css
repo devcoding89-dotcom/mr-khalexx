@@ -206,17 +206,6 @@
   }
 
   @keyframes pulseGlow {
-    from {
-      box-shadow: 0 0 20px hsl(45 100% 50% / 0.5);
-    }
-    to {
-      box-shadow: 0 0 30px hsl(45 100% 50% / 0.8);
-    }
-  }
-    animation: pulse-glow 2s ease-in-out infinite;
-  }
-  
-  @keyframes pulse-glow {
     0%, 100% { 
       box-shadow: 0 0 20px hsl(45 100% 50% / 0.5);
     }
