@@ -1,9 +1,15 @@
-const { Client } = require('pg');
-const fs = require('fs');
+import { Client } from 'pg';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 async function runMigration() {
-  // You'll need to replace [YOUR-PASSWORD] with your actual database password
-  const connectionString = 'postgresql://postgres:[YOUR-PASSWORD]@db.luxoncvjroafxvsylhjh.supabase.co:5432/postgres';
+  // Database connection string with URL-encoded password
+  // The @ symbol in password needs to be encoded as %40
+  const connectionString = 'postgresql://postgres:Khaleed%40890@db.luxoncvjroafxvsylhjh.supabase.co:5432/postgres';
 
   const client = new Client({ connectionString });
 
