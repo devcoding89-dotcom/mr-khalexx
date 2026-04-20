@@ -4,13 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ProductCard from '@/components/ProductCard';
-import { phones, type Product } from '@/data/database';
+import { getAllProducts } from '@/lib/supabase';
+import type { Product } from '@/types/database';
 
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'rating';
 
 export default function PhonesSection() {
   const [sortBy, setSortBy] = useState<SortOption>('featured');
   const [isVisible, setIsVisible] = useState(false);
+  const [phones, setPhones] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -30,6 +33,24 @@ export default function PhonesSection() {
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    loadPhones();
+    // Refresh phones every 5 seconds
+    const interval = setInterval(loadPhones, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadPhones = async () => {
+    try {
+      const allProducts = await getAllProducts();
+      setPhones(allProducts.filter(p => p.category === 'phones'));
+    } catch (error) {
+      console.error('Error loading phones:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const sortProducts = (products: Product[]): Product[] => {
     switch (sortBy) {

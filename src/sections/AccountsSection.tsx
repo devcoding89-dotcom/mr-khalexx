@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ProductCard from '@/components/ProductCard';
-import { codAccounts, type Product } from '@/data/database';
+import { getAllProducts } from '@/lib/supabase';
+import type { Product } from '@/types/database';
 
 type SortOption = 'featured' | 'price-low' | 'price-high' | 'rating';
 type FilterOption = 'all' | 'prestige' | 'warzone' | 'zombies' | 'dmz';
@@ -13,6 +14,8 @@ export default function AccountsSection() {
   const [sortBy, setSortBy] = useState<SortOption>('featured');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const [isVisible, setIsVisible] = useState(false);
+  const [codAccounts, setCodAccounts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -32,6 +35,24 @@ export default function AccountsSection() {
 
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    loadAccounts();
+    // Refresh accounts every 5 seconds
+    const interval = setInterval(loadAccounts, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadAccounts = async () => {
+    try {
+      const allProducts = await getAllProducts();
+      setCodAccounts(allProducts.filter(p => p.category === 'accounts'));
+    } catch (error) {
+      console.error('Error loading accounts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filterProducts = (products: Product[]): Product[] => {
     if (filterBy === 'all') return products;

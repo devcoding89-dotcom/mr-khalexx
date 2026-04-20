@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ProductCard from '@/components/ProductCard';
-import { phones, codAccounts, codPoints, getFeaturedProducts, type Category } from '@/data/database';
+import { getAllProducts } from '@/lib/supabase';
+import type { Product, Category } from '@/types/database';
 
 const categories = [
   { id: 'featured' as const, name: 'Featured', icon: Flame, description: 'Handpicked best sellers' },
@@ -15,6 +16,8 @@ const categories = [
 
 export default function Products() {
   const [isVisible, setIsVisible] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const sectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -35,19 +38,29 @@ export default function Products() {
     return () => observer.disconnect();
   }, []);
 
-  const getProducts = (category: string) => {
-    switch (category) {
-      case 'featured':
-        return getFeaturedProducts();
-      case 'phones':
-        return phones;
-      case 'accounts':
-        return codAccounts;
-      case 'cp':
-        return codPoints;
-      default:
-        return getFeaturedProducts();
+  useEffect(() => {
+    loadProducts();
+    // Set up interval to refresh products every 5 seconds
+    const interval = setInterval(loadProducts, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const loadProducts = async () => {
+    try {
+      const data = await getAllProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const getProducts = (category: string): Product[] => {
+    if (category === 'featured') {
+      return products.filter(p => p.is_bestseller || p.is_new).slice(0, 8);
+    }
+    return products.filter(p => p.category === category);
   };
 
   const scrollToCategory = (categoryId: string) => {
@@ -98,7 +111,9 @@ export default function Products() {
             </TabsList>
           </div>
 
-          {categories.map((category) => (
+          {categories.map((category) => {
+            const categoryProducts = getProducts(category.id);
+            return (
             <TabsContent key={category.id} value={category.id} className="mt-0">
               <div className={`transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
                 {/* Category Header */}
@@ -110,25 +125,31 @@ export default function Products() {
                     </h3>
                     <p className="text-gray-500 text-sm mt-1">{category.description}</p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() => scrollToCategory(category.id)}
-                    className="text-[#FFD700] hover:text-[#FFD700] hover:bg-[#FFD700]/10"
-                  >
-                    View All
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
                 </div>
 
                 {/* Products Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {getProducts(category.id).slice(0, 4).map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
-                  ))}
-                </div>
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-400">Loading products...</div>
+                  </div>
+                ) : categoryProducts.length === 0 ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="text-gray-500 text-center">
+                      <p className="text-lg font-semibold">No products available</p>
+                      <p className="text-sm mt-1">Check back soon for more items</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {categoryProducts.slice(0, 4).map((product, index) => (
+                      <ProductCard key={product.id} product={product} index={index} />
+                    ))}
+                  </div>
+                )}
               </div>
             </TabsContent>
-          ))}
+            );
+          })}
         </Tabs>
 
         {/* Trust Badges */}

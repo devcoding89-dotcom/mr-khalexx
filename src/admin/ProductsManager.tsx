@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Upload, ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,37 +116,54 @@ export default function ProductsManager() {
     }
     setIsSubmitting(true);
 
-    const productData = {
-      name: formData.name,
-      description: formData.description,
-      price: parseFloat(formData.price),
-      original_price: formData.original_price ? parseFloat(formData.original_price) : undefined,
-      category: formData.category,
-      image: formData.image,
-      stock: parseInt(formData.stock),
-      rating: parseFloat(formData.rating),
-      reviews: parseInt(formData.reviews),
-      features: formData.features.split(',').map(f => f.trim()).filter(f => f),
-      badge: formData.badge || undefined,
-      is_new: formData.is_new,
-      is_bestseller: formData.is_bestseller,
-    };
+    try {
+      const productData = {
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        original_price: formData.original_price ? parseFloat(formData.original_price) : undefined,
+        category: formData.category,
+        image: formData.image,
+        stock: parseInt(formData.stock),
+        rating: parseFloat(formData.rating),
+        reviews: parseInt(formData.reviews),
+        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+        badge: formData.badge || undefined,
+        is_new: formData.is_new,
+        is_bestseller: formData.is_bestseller,
+      };
 
-    if (editingProduct) {
-      const updated = await updateProduct(editingProduct.id, productData);
-      if (updated) {
-        updateProductInStore(editingProduct.id, updated);
+      console.log('📝 Submitting product:', formData.name);
+
+      if (editingProduct) {
+        const updated = await updateProduct(editingProduct.id, productData);
+        if (updated) {
+          updateProductInStore(editingProduct.id, updated);
+          console.log('✅ Product updated successfully');
+          alert('Product updated successfully! Check your store.');
+        } else {
+          console.error('Failed to update product');
+          alert('Failed to update product. Please try again.');
+        }
+      } else {
+        const created = await createProduct(productData);
+        if (created) {
+          addProduct(created);
+          console.log('✅ Product created successfully:', created);
+          alert('Product created successfully! It should appear on your store now.');
+        } else {
+          console.error('Failed to create product');
+          alert('Failed to create product. Please try again.');
+        }
       }
-    } else {
-      const created = await createProduct(productData);
-      if (created) {
-        addProduct(created);
-      }
+    } catch (error) {
+      console.error('Error submitting product:', error);
+      alert('An error occurred. Please check the console for details.');
+    } finally {
+      setIsSubmitting(false);
+      setIsDialogOpen(false);
+      resetForm();
     }
-
-    setIsSubmitting(false);
-    setIsDialogOpen(false);
-    resetForm();
   };
 
   return (
@@ -174,29 +191,31 @@ export default function ProductsManager() {
               Add Product
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl bg-[#0f0f14] border-white/10 text-white max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl bg-[#0f0f14] border-white/10 text-white max-h-[90vh] overflow-y-auto z-[100]">
             <DialogHeader>
-              <DialogTitle className="font-['Orbitron']">
+              <DialogTitle className="text-white font-['Orbitron'] text-xl">
                 {editingProduct ? 'Edit Product' : 'Add New Product'}
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit} className="space-y-4 mt-6">
+              {/* Name and Category Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label className="text-white">Product Name *</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="Enter product name"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Category</Label>
+                  <Label className="text-white">Category *</Label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value as Category })}
-                    className="w-full h-10 px-3 rounded-md bg-white/5 border border-white/10 text-white"
+                    className="w-full h-10 px-3 rounded-md bg-white/5 border border-white/10 text-white focus:ring-2 focus:ring-[#FFD700]/50"
                   >
                     {categories.map(c => (
                       <option key={c.value} value={c.value}>{c.label}</option>
@@ -205,64 +224,72 @@ export default function ProductsManager() {
                 </div>
               </div>
 
+              {/* Description */}
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label className="text-white">Description *</Label>
                 <Input
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white"
+                  placeholder="Enter product description"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                   required
                 />
               </div>
 
+              {/* Price Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Price (₦)</Label>
+                  <Label className="text-white">Price (₦) *</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.price}
                     onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="0.00"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Original Price (₦) (optional)</Label>
+                  <Label className="text-white">Original Price (₦)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     value={formData.original_price}
                     onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="0.00"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                   />
                 </div>
               </div>
 
+              {/* Stock and Badge Row */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Stock</Label>
+                  <Label className="text-white">Stock *</Label>
                   <Input
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    placeholder="0"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Badge (optional)</Label>
+                  <Label className="text-white">Badge (optional)</Label>
                   <Input
                     value={formData.badge}
                     onChange={(e) => setFormData({ ...formData, badge: e.target.value })}
                     placeholder="Hot, New, Sale..."
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                   />
                 </div>
               </div>
 
+              {/* Image Upload */}
               <div className="space-y-2">
-                <Label>Product Image</Label>
+                <Label className="text-white">Product Image *</Label>
                 <div className="relative">
                   <input
                     type="file"
@@ -273,20 +300,20 @@ export default function ProductsManager() {
                   />
                   <label 
                     htmlFor="image-upload"
-                    className="flex items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#FFD700]/50 hover:bg-white/5 transition-all"
+                    className="flex items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#FFD700]/50 hover:bg-white/5 transition-all bg-white/2"
                   >
                     <div className="text-center">
                       {imagePreview ? (
                         <img 
                           src={imagePreview} 
                           alt="Preview" 
-                          className="w-full h-full object-contain p-2"
+                          className="w-full h-full object-contain p-2 rounded-lg"
                         />
                       ) : (
                         <div className="flex flex-col items-center gap-2">
                           <Upload className="w-8 h-8 text-gray-500" />
-                          <span className="text-sm text-gray-400">Click to upload image from phone</span>
-                          <span className="text-xs text-gray-600">or drag and drop</span>
+                          <span className="text-sm text-gray-300">Click to upload image</span>
+                          <span className="text-xs text-gray-500">JPG, PNG up to 5MB</span>
                         </div>
                       )}
                     </div>
@@ -306,52 +333,82 @@ export default function ProductsManager() {
                 )}
               </div>
 
+              {/* Rating and Reviews Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-white">Rating</Label>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={formData.rating}
+                    onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                    placeholder="4.5"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-white">Reviews Count</Label>
+                  <Input
+                    type="number"
+                    value={formData.reviews}
+                    onChange={(e) => setFormData({ ...formData, reviews: e.target.value })}
+                    placeholder="0"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                  />
+                </div>
+              </div>
+
+              {/* Features */}
               <div className="space-y-2">
-                <Label>Features (comma separated)</Label>
+                <Label className="text-white">Features (comma separated)</Label>
                 <Input
                   value={formData.features}
                   onChange={(e) => setFormData({ ...formData, features: e.target.value })}
                   placeholder="Feature 1, Feature 2, Feature 3"
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                 />
               </div>
 
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {/* Checkboxes */}
+              <div className="flex gap-6 py-2">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_new}
                     onChange={(e) => setFormData({ ...formData, is_new: e.target.checked })}
-                    className="w-4 h-4 rounded border-white/10 bg-white/5"
+                    className="w-4 h-4 rounded border-white/20 bg-white/5 accent-[#FFD700] cursor-pointer"
                   />
-                  <span className="text-sm text-gray-300">Mark as New</span>
+                  <span className="text-sm text-gray-300">Mark as New Product</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={formData.is_bestseller}
                     onChange={(e) => setFormData({ ...formData, is_bestseller: e.target.checked })}
-                    className="w-4 h-4 rounded border-white/10 bg-white/5"
+                    className="w-4 h-4 rounded border-white/20 bg-white/5 accent-[#FFD700] cursor-pointer"
                   />
-                  <span className="text-sm text-gray-300">Bestseller</span>
+                  <span className="text-sm text-gray-300">Mark as Bestseller</span>
                 </label>
               </div>
 
-              <div className="flex gap-3 pt-4">
+              {/* Submit Buttons */}
+              <div className="flex gap-3 pt-6 border-t border-white/10">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setIsDialogOpen(false)}
-                  className="flex-1 border-white/10 hover:bg-white/5"
+                  className="flex-1 border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 btn-primary"
+                  className="flex-1 bg-[#FFD700] text-black hover:bg-[#FFD700]/90 font-semibold disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Saving...' : (editingProduct ? 'Update' : 'Create')}
+                  {isSubmitting ? 'Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
                 </Button>
               </div>
             </form>
