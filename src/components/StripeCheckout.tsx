@@ -10,7 +10,7 @@ import { generateOrderId, generateTrackingId } from '@/lib/supabase';
 import type { Order } from '@/types/database';
 
 // Initialize Stripe with your publishable key
-const stripePromise = loadStripe('sb_publishable_pg4yIl0XrROvjoJf3j5jDg_zPgJjkDA');
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
 interface StripeCheckoutProps {
   onClose: () => void;
@@ -51,6 +51,13 @@ function CheckoutForm({ onClose, onSuccess }: StripeCheckoutProps) {
     setError('');
 
     try {
+      // Check if Stripe key is configured
+      if (!import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY === 'your-stripe-key-here') {
+        setError('Payment system not configured. Please contact admin or use WhatsApp checkout.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Create payment method
       const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
         type: 'card',
@@ -93,9 +100,11 @@ function CheckoutForm({ onClose, onSuccess }: StripeCheckoutProps) {
         stripe_payment_intent_id: paymentMethod.id,
       };
 
-      // Simulate API call and log order (in production, send to backend)
-      console.log('Order created:', orderData);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // For demo purposes - simulate payment processing
+      // In production, this would call your backend API to create a PaymentIntent
+      console.log('Payment method created:', paymentMethod.id);
+      console.log('Order data:', orderData);
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate processing time
 
       // Success!
       clearCart();

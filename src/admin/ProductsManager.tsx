@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,7 @@ export default function ProductsManager() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -60,7 +61,21 @@ export default function ProductsManager() {
       is_new: false,
       is_bestseller: false,
     });
+    setImagePreview('');
     setEditingProduct(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setFormData({ ...formData, image: base64String });
+        setImagePreview(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleEdit = (product: Product) => {
@@ -80,6 +95,7 @@ export default function ProductsManager() {
       is_new: product.is_new || false,
       is_bestseller: product.is_bestseller || false,
     });
+    setImagePreview(product.image);
     setIsDialogOpen(true);
   };
 
@@ -94,6 +110,10 @@ export default function ProductsManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.image) {
+      alert('Please select an image for the product');
+      return;
+    }
     setIsSubmitting(true);
 
     const productData = {
@@ -102,7 +122,7 @@ export default function ProductsManager() {
       price: parseFloat(formData.price),
       original_price: formData.original_price ? parseFloat(formData.original_price) : undefined,
       category: formData.category,
-      image: formData.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&q=80',
+      image: formData.image,
       stock: parseInt(formData.stock),
       rating: parseFloat(formData.rating),
       reviews: parseInt(formData.reviews),
@@ -242,13 +262,48 @@ export default function ProductsManager() {
               </div>
 
               <div className="space-y-2">
-                <Label>Image URL</Label>
-                <Input
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://..."
-                  className="bg-white/5 border-white/10 text-white"
-                />
+                <Label>Product Image</Label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label 
+                    htmlFor="image-upload"
+                    className="flex items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#FFD700]/50 hover:bg-white/5 transition-all"
+                  >
+                    <div className="text-center">
+                      {imagePreview ? (
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          className="w-full h-full object-contain p-2"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <Upload className="w-8 h-8 text-gray-500" />
+                          <span className="text-sm text-gray-400">Click to upload image from phone</span>
+                          <span className="text-xs text-gray-600">or drag and drop</span>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+                {imagePreview && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImagePreview('');
+                      setFormData({ ...formData, image: '' });
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300 mt-2"
+                  >
+                    Clear image
+                  </button>
+                )}
               </div>
 
               <div className="space-y-2">
