@@ -130,26 +130,45 @@ export default function ProductsManager() {
       alert('Please select an image for the product');
       return;
     }
+    
+    // Validate required fields
+    if (!formData.name.trim()) {
+      alert('Please enter a product name');
+      return;
+    }
+    if (!formData.description.trim()) {
+      alert('Please enter a product description');
+      return;
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    if (!formData.stock || parseInt(formData.stock) < 0) {
+      alert('Please enter valid stock quantity');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const productData = {
-        name: formData.name,
-        description: formData.description,
+        name: formData.name.trim(),
+        description: formData.description.trim(),
         price: parseFloat(formData.price),
-        original_price: formData.original_price ? parseFloat(formData.original_price) : undefined,
+        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
         category: formData.category,
         image: formData.image,
         stock: parseInt(formData.stock),
         rating: parseFloat(formData.rating),
         reviews: parseInt(formData.reviews),
         features: formData.features.split(',').map(f => f.trim()).filter(f => f),
-        badge: formData.badge || undefined,
+        badge: formData.badge?.trim() || null,
         is_new: formData.is_new,
         is_bestseller: formData.is_bestseller,
       };
 
-      console.log('📝 Submitting product:', formData.name);
+      console.log('📝 Submitting product:', productData);
 
       if (editingProduct) {
         const updated = await updateProduct(editingProduct.id, productData);

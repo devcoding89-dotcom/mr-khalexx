@@ -107,24 +107,22 @@ export async function createProduct(product: Omit<Product, 'id' | 'created_at'>)
     return null;
   }
 
-  const newProduct: Omit<Product, 'created_at'> = {
-    ...product,
-    id: crypto.randomUUID ? crypto.randomUUID() : 'prod-' + Date.now().toString(36),
-  };
-
   try {
+    // Don't include id - let Supabase generate it
+    // Don't include created_at - let Supabase generate it with DEFAULT NOW()
     const { data, error } = await supabase
       .from('products')
-      .insert([{ ...newProduct, created_at: new Date().toISOString() }])
+      .insert([product])
       .select()
       .single();
 
     if (error) {
       console.error('❌ Error creating product in Supabase:', error);
-      console.error('Product data:', newProduct);
+      console.error('Product data:', product);
       return null;
     }
 
+    console.log('✅ Product created successfully in Supabase:', data);
     return data;
   } catch (err) {
     console.error('❌ Exception creating product in Supabase:', err);
