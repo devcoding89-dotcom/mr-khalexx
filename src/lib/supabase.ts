@@ -108,6 +108,15 @@ export async function createProduct(product: Omit<Product, 'id' | 'created_at'>)
   }
 
   try {
+    console.log('📦 Preparing to insert product:', product.name);
+    console.log('🔍 Data types:', {
+      name: typeof product.name,
+      price: typeof product.price,
+      stock: typeof product.stock,
+      features: Array.isArray(product.features) ? 'array' : typeof product.features,
+      imageLength: product.image.length,
+    });
+
     // Don't include id - let Supabase generate it
     // Don't include created_at - let Supabase generate it with DEFAULT NOW()
     const { data, error } = await supabase
@@ -117,15 +126,28 @@ export async function createProduct(product: Omit<Product, 'id' | 'created_at'>)
       .single();
 
     if (error) {
-      console.error('❌ Error creating product in Supabase:', error);
-      console.error('Product data:', product);
+      console.error('❌ Error creating product in Supabase');
+      console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error details:', error);
+      console.error('Product data sent:', {
+        name: product.name,
+        category: product.category,
+        price: product.price,
+        stock: product.stock,
+        imageSize: `${(product.image.length / 1024 / 1024).toFixed(2)} MB`,
+      });
       return null;
     }
 
-    console.log('✅ Product created successfully in Supabase:', data);
+    console.log('✅ Product created successfully in Supabase:', data?.id);
     return data;
   } catch (err) {
     console.error('❌ Exception creating product in Supabase:', err);
+    if (err instanceof Error) {
+      console.error('Exception message:', err.message);
+      console.error('Exception stack:', err.stack);
+    }
     return null;
   }
 }

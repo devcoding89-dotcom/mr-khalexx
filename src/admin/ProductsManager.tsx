@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { useAdminStore } from '@/store/adminStore';
 import { createProduct, updateProduct, deleteProduct, getAllProducts } from '@/lib/supabase';
+import { uploadProductImage } from '@/lib/imageUpload';
 import type { Product, Category } from '@/types/database';
 
 const categories: { value: Category; label: string }[] = [
@@ -152,13 +153,32 @@ export default function ProductsManager() {
     setIsSubmitting(true);
 
     try {
+      console.log('📝 Starting product submission:', formData.name);
+      
+      // Upload image first
+      let imageUrl = formData.image;
+      
+      // Only re-upload if image was changed (starts with 'data:' means it's base64)
+      if (formData.image.startsWith('data:')) {
+        console.log('🖼️ Uploading product image...');
+        const uploadedUrl = await uploadProductImage(formData.image, formData.name);
+        
+        if (!uploadedUrl) {
+          alert('Failed to upload image. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+        
+        imageUrl = uploadedUrl;
+      }
+
       const productData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         original_price: formData.original_price ? parseFloat(formData.original_price) : null,
         category: formData.category,
-        image: formData.image,
+        image: imageUrl,
         stock: parseInt(formData.stock),
         rating: parseFloat(formData.rating),
         reviews: parseInt(formData.reviews),
@@ -168,7 +188,7 @@ export default function ProductsManager() {
         is_bestseller: formData.is_bestseller,
       };
 
-      console.log('📝 Submitting product:', productData);
+      console.log('📝 Submitting product to database:', productData.name);
 
       if (editingProduct) {
         const updated = await updateProduct(editingProduct.id, productData);
@@ -453,7 +473,7 @@ export default function ProductsManager() {
                   disabled={isSubmitting}
                   className="flex-1 bg-[#FFD700] text-black hover:bg-[#FFD700]/90 font-semibold disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
+                  {isSubmitting ? '🖼️ Uploading & Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
                 </Button>
               </div>
             </form>
