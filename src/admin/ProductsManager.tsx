@@ -24,6 +24,7 @@ export default function ProductsManager() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [imageInputMethod, setImageInputMethod] = useState<'url' | 'upload'>('url'); // Default to URL input
 
   // Form state
   const [formData, setFormData] = useState({
@@ -64,6 +65,7 @@ export default function ProductsManager() {
       is_bestseller: false,
     });
     setImagePreview('');
+    setImageInputMethod('url');
     setEditingProduct(null);
   };
 
@@ -127,10 +129,6 @@ export default function ProductsManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.image) {
-      alert('Please select an image for the product');
-      return;
-    }
     
     // Validate required fields
     if (!formData.name.trim()) {
@@ -155,22 +153,27 @@ export default function ProductsManager() {
     try {
       console.log('📝 Starting product submission:', formData.name);
       
-      // Upload image first
+      // Use image URL or upload if it's base64, or use placeholder
       let imageUrl = formData.image;
       
-      // Only re-upload if image was changed (starts with 'data:' means it's base64)
-      if (formData.image.startsWith('data:')) {
+      if (!imageUrl) {
+        // Use a default placeholder image
+        imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
+        console.log('📦 Using placeholder image');
+      } else if (imageUrl.startsWith('data:')) {
+        // Only upload if it's a base64 encoded image
         console.log('🖼️ Uploading product image...');
-        const uploadedUrl = await uploadProductImage(formData.image, formData.name);
+        const uploadedUrl = await uploadProductImage(imageUrl, formData.name);
         
         if (!uploadedUrl) {
-          alert('Failed to upload image. Please try again.');
-          setIsSubmitting(false);
-          return;
+          // Allow continuing without image rather than failing
+          console.warn('⚠️ Image upload failed, using placeholder');
+          imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
+        } else {
+          imageUrl = uploadedUrl;
         }
-        
-        imageUrl = uploadedUrl;
       }
+      // If it's already a URL, use it as-is
 
       const productData = {
         name: formData.name.trim(),
@@ -352,38 +355,84 @@ export default function ProductsManager() {
                 </div>
               </div>
 
-              {/* Image Upload */}
+              {/* Image Section - Optional */}
               <div className="space-y-2">
-                <Label className="text-white">Product Image *</Label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label 
-                    htmlFor="image-upload"
-                    className="flex items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#FFD700]/50 hover:bg-white/5 transition-all bg-white/2"
-                  >
-                    <div className="text-center">
-                      {imagePreview ? (
-                        <img 
-                          src={imagePreview} 
-                          alt="Preview" 
-                          className="w-full h-full object-contain p-2 rounded-lg"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center gap-2">
-                          <Upload className="w-8 h-8 text-gray-500" />
-                          <span className="text-sm text-gray-300">Click to upload image</span>
-                          <span className="text-xs text-gray-500">JPG, PNG up to 5MB</span>
-                        </div>
-                      )}
-                    </div>
-                  </label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-white">Product Image (Optional)</Label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMethod('url')}
+                      className={`text-xs px-2 py-1 rounded ${
+                        imageInputMethod === 'url'
+                          ? 'bg-[#FFD700] text-black'
+                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                      }`}
+                    >
+                      URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImageInputMethod('upload')}
+                      className={`text-xs px-2 py-1 rounded ${
+                        imageInputMethod === 'upload'
+                          ? 'bg-[#FFD700] text-black'
+                          : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                      }`}
+                    >
+                      Upload
+                    </button>
+                  </div>
                 </div>
+
+                {imageInputMethod === 'url' ? (
+                  <div className="space-y-2">
+                    <Input
+                      type="url"
+                      value={formData.image}
+                      onChange={(e) => {
+                        setFormData({ ...formData, image: e.target.value });
+                        setImagePreview(e.target.value);
+                      }}
+                      placeholder="https://example.com/image.jpg"
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                    />
+                    <p className="text-xs text-gray-400">
+                      Paste an image URL or leave empty to use a placeholder
+                    </p>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label 
+                      htmlFor="image-upload"
+                      className="flex items-center justify-center w-full h-40 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-[#FFD700]/50 hover:bg-white/5 transition-all bg-white/2"
+                    >
+                      <div className="text-center">
+                        {imagePreview ? (
+                          <img 
+                            src={imagePreview} 
+                            alt="Preview" 
+                            className="w-full h-full object-contain p-2 rounded-lg"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-2">
+                            <Upload className="w-8 h-8 text-gray-500" />
+                            <span className="text-sm text-gray-300">Click to upload image</span>
+                            <span className="text-xs text-gray-500">JPG, PNG up to 5MB</span>
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  </div>
+                )}
+
                 {imagePreview && (
                   <button
                     type="button"
@@ -473,7 +522,7 @@ export default function ProductsManager() {
                   disabled={isSubmitting}
                   className="flex-1 bg-[#FFD700] text-black hover:bg-[#FFD700]/90 font-semibold disabled:opacity-50"
                 >
-                  {isSubmitting ? '🖼️ Uploading & Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
+                  {isSubmitting ? '� Saving...' : (editingProduct ? 'Update Product' : 'Create Product')}
                 </Button>
               </div>
             </form>
