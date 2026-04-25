@@ -23,19 +23,36 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const { products, orders, setProducts, setOrders, setLoading } = useAdminStore();
   const navigate = useNavigate();
 
+  // Load data on mount
   useEffect(() => {
     loadData();
+    // Also set up a refresh interval to keep data fresh
+    const interval = setInterval(loadData, 10000); // Refresh every 10 seconds
+    return () => clearInterval(interval);
   }, []);
 
+  // Reload data when switching to products tab
+  useEffect(() => {
+    if (activeTab === 'products') {
+      loadData();
+    }
+  }, [activeTab]);
+
   const loadData = async () => {
-    setLoading(true);
-    const [productsData, ordersData] = await Promise.all([
-      getAllProducts(),
-      getAllOrders()
-    ]);
-    setProducts(productsData);
-    setOrders(ordersData);
-    setLoading(false);
+    try {
+      setLoading(true);
+      const [productsData, ordersData] = await Promise.all([
+        getAllProducts(),
+        getAllOrders()
+      ]);
+      setProducts(productsData);
+      setOrders(ordersData);
+      console.log('✅ Data loaded:', { products: productsData.length, orders: ordersData.length });
+    } catch (error) {
+      console.error('❌ Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const stats = {

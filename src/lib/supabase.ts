@@ -1,97 +1,63 @@
 import { createClient } from '@supabase/supabase-js';
-import { localProducts, getLocalProductsByCategory, getLocalProductById } from '@/data/localDatabase';
 import type { Product, Order, TrackingUpdate } from '@/types/database';
 
-// Supabase configuration - UPDATE THESE WITH YOUR ACTUAL CREDENTIALS
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check if Supabase is properly configured
-const isSupabaseConfigured = !SUPABASE_URL.includes('your-project') && !SUPABASE_ANON_KEY.includes('your-anon');
+const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
-export const supabase = isSupabaseConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+export const supabase = isSupabaseConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 
-// Log configuration status
 if (typeof window !== 'undefined') {
   console.log('🔧 Supabase Configuration:');
   console.log('✅ Configured:', isSupabaseConfigured);
-  console.log('📍 URL:', SUPABASE_URL.substring(0, 30) + '...');
-  console.log('🔑 Key length:', SUPABASE_ANON_KEY.length + ' chars');
+  console.log('📍 URL:', SUPABASE_URL || 'missing');
+  console.log('🔑 Key length:', SUPABASE_ANON_KEY?.length || 0, 'chars');
+  if (!isSupabaseConfigured) {
+    console.warn('⚠️ Supabase is not configured. This app requires Supabase.');
+  }
 }
 
 // Admin credentials (in production, use proper auth)
 const ADMIN_EMAIL = 'admin@khalexhub.com';
 const ADMIN_PASSWORD = 'admin123';
 
-// Local storage keys
-const PRODUCTS_KEY = 'khalex_products';
-const ORDERS_KEY = 'khalex_orders';
-const TRACKING_KEY = 'khalex_tracking';
-
-// ==================== LOCAL STORAGE HELPERS ====================
-
-const getLocalProducts = (): Product[] => {
-  const stored = localStorage.getItem(PRODUCTS_KEY);
-  if (stored) {
-    return JSON.parse(stored);
-  }
-  // Initialize with default products
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(localProducts));
-  return localProducts;
-};
-
-const saveLocalProducts = (products: Product[]) => {
-  localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products));
-};
-
-const getLocalOrders = (): Order[] => {
-  const stored = localStorage.getItem(ORDERS_KEY);
-  return stored ? JSON.parse(stored) : [];
-};
-
-const saveLocalOrders = (orders: Order[]) => {
-  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
-};
-
-const getLocalTracking = (): TrackingUpdate[] => {
-  const stored = localStorage.getItem(TRACKING_KEY);
-  return stored ? JSON.parse(stored) : [];
-};
-
-const saveLocalTracking = (tracking: TrackingUpdate[]) => {
-  localStorage.setItem(TRACKING_KEY, JSON.stringify(tracking));
-};
-
 // ==================== PRODUCTS ====================
 
 export async function getAllProducts(): Promise<Product[]> {
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('❌ Error fetching products from Supabase:', error);
-        console.log('⚠️ Falling back to localStorage');
-        return getLocalProducts();
-      }
-
-      console.log(`✅ Fetched ${data?.length || 0} products from Supabase`);
-      return data || getLocalProducts();
-    } catch (err) {
-      console.error('❌ Exception fetching products:', err);
-      return getLocalProducts();
-    }
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getAllProducts failed.');
+    return [];
   }
 
-  console.log('⚠️ Supabase not configured, using localStorage');
-  return getLocalProducts();
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ Error fetching products from Supabase:', error);
+      return [];
+    }
+
+    console.log(`✅ Fetched ${data?.length || 0} products from Supabase`);
+    return data || [];
+  } catch (err) {
+    console.error('❌ Exception fetching products:', err);
+    return [];
+  }
 }
 
 export async function getProductsByCategory(category: string): Promise<Product[]> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getProductsByCategory failed.');
+    return [];
+  }
+
+  try {
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -99,18 +65,24 @@ export async function getProductsByCategory(category: string): Promise<Product[]
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching products by category:', error);
-      return getLocalProductsByCategory(category);
+      console.error('❌ Error fetching products by category:', error);
+      return [];
     }
 
-    return data || getLocalProductsByCategory(category);
+    return data || [];
+  } catch (err) {
+    console.error('❌ Exception fetching products by category:', err);
+    return [];
   }
-
-  return getLocalProductsByCategory(category);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getProductById failed.');
+    return null;
+  }
+
+  try {
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -118,58 +90,55 @@ export async function getProductById(id: string): Promise<Product | null> {
       .single();
 
     if (error) {
-      console.error('Error fetching product:', error);
-      return getLocalProductById(id) || null;
+      console.error('❌ Error fetching product:', error);
+      return null;
     }
 
     return data;
+  } catch (err) {
+    console.error('❌ Exception fetching product:', err);
+    return null;
   }
-
-  return getLocalProductById(id) || null;
 }
 
 export async function createProduct(product: Omit<Product, 'id' | 'created_at'>): Promise<Product | null> {
-  // Generate a simple UUID-like ID (or let Supabase generate it)
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. createProduct failed.');
+    return null;
+  }
+
   const newProduct: Omit<Product, 'created_at'> = {
     ...product,
     id: crypto.randomUUID ? crypto.randomUUID() : 'prod-' + Date.now().toString(36),
   };
 
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert([newProduct])
-        .select()
-        .single();
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .insert([{ ...newProduct, created_at: new Date().toISOString() }])
+      .select()
+      .single();
 
-      if (error) {
-        console.error('Error creating product in Supabase:', error);
-        console.error('Product data:', newProduct);
-        // Fall through to local storage
-      } else if (data) {
-        return data;
-      }
-    } catch (err) {
-      console.error('Exception creating product in Supabase:', err);
+    if (error) {
+      console.error('❌ Error creating product in Supabase:', error);
+      console.error('Product data:', newProduct);
+      return null;
     }
-  }
 
-  // Local storage fallback
-  const products = getLocalProducts();
-  products.unshift({
-    ...newProduct,
-    created_at: new Date().toISOString(),
-  });
-  saveLocalProducts(products);
-  return {
-    ...newProduct,
-    created_at: new Date().toISOString(),
-  };
+    return data;
+  } catch (err) {
+    console.error('❌ Exception creating product in Supabase:', err);
+    return null;
+  }
 }
 
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. updateProduct failed.');
+    return null;
+  }
+
+  try {
     const { data, error } = await supabase
       .from('products')
       .update(updates)
@@ -178,57 +147,56 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
       .single();
 
     if (error) {
-      console.error('Error updating product in Supabase:', error);
-    } else {
-      return data;
+      console.error('❌ Error updating product in Supabase:', error);
+      return null;
     }
-  }
 
-  // Local storage fallback
-  const products = getLocalProducts();
-  const index = products.findIndex(p => p.id === id);
-  if (index !== -1) {
-    products[index] = { ...products[index], ...updates };
-    saveLocalProducts(products);
-    return products[index];
+    return data;
+  } catch (err) {
+    console.error('❌ Exception updating product:', err);
+    return null;
   }
-  return null;
 }
 
 export async function deleteProduct(id: string): Promise<boolean> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. deleteProduct failed.');
+    return false;
+  }
+
+  try {
     const { error } = await supabase
       .from('products')
       .delete()
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting product from Supabase:', error);
-    } else {
-      return true;
+      console.error('❌ Error deleting product in Supabase:', error);
+      return false;
     }
-  }
 
-  // Local storage fallback
-  const products = getLocalProducts();
-  const filtered = products.filter(p => p.id !== id);
-  if (filtered.length !== products.length) {
-    saveLocalProducts(filtered);
     return true;
+  } catch (err) {
+    console.error('❌ Exception deleting product:', err);
+    return false;
   }
-  return false;
 }
 
 // ==================== ORDERS ====================
 
 export async function createOrder(order: Omit<Order, 'id' | 'created_at'>): Promise<Order | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. createOrder failed.');
+    return null;
+  }
+
   const newOrder: Order = {
     ...order,
     id: 'order-' + Date.now().toString(36),
     created_at: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured && supabase) {
+  try {
     const { data, error } = await supabase
       .from('orders')
       .insert([newOrder])
@@ -236,21 +204,24 @@ export async function createOrder(order: Omit<Order, 'id' | 'created_at'>): Prom
       .single();
 
     if (error) {
-      console.error('Error creating order in Supabase:', error);
-    } else {
-      return data;
+      console.error('❌ Error creating order in Supabase:', error);
+      return null;
     }
-  }
 
-  // Local storage fallback
-  const orders = getLocalOrders();
-  orders.unshift(newOrder);
-  saveLocalOrders(orders);
-  return newOrder;
+    return data;
+  } catch (err) {
+    console.error('❌ Exception creating order in Supabase:', err);
+    return null;
+  }
 }
 
 export async function getOrderById(orderId: string): Promise<Order | null> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getOrderById failed.');
+    return null;
+  }
+
+  try {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
@@ -258,69 +229,80 @@ export async function getOrderById(orderId: string): Promise<Order | null> {
       .single();
 
     if (error) {
-      console.error('Error fetching order from Supabase:', error);
-    } else {
-      return data;
+      console.error('❌ Error fetching order from Supabase:', error);
+      return null;
     }
-  }
 
-  // Local storage fallback
-  const orders = getLocalOrders();
-  return orders.find(o => o.order_id === orderId) || null;
+    return data;
+  } catch (err) {
+    console.error('❌ Exception fetching order from Supabase:', err);
+    return null;
+  }
 }
 
 export async function getAllOrders(): Promise<Order[]> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getAllOrders failed.');
+    return [];
+  }
+
+  try {
     const { data, error } = await supabase
       .from('orders')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching orders from Supabase:', error);
-    } else {
-      return data || [];
+      console.error('❌ Error fetching orders from Supabase:', error);
+      return [];
     }
-  }
 
-  return getLocalOrders();
+    return data || [];
+  } catch (err) {
+    console.error('❌ Exception fetching orders from Supabase:', err);
+    return [];
+  }
 }
 
 export async function updateOrderStatus(orderId: string, status: Order['status']): Promise<boolean> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. updateOrderStatus failed.');
+    return false;
+  }
+
+  try {
     const { error } = await supabase
       .from('orders')
       .update({ status })
       .eq('order_id', orderId);
 
     if (error) {
-      console.error('Error updating order status in Supabase:', error);
-    } else {
-      return true;
+      console.error('❌ Error updating order status in Supabase:', error);
+      return false;
     }
-  }
 
-  // Local storage fallback
-  const orders = getLocalOrders();
-  const order = orders.find(o => o.order_id === orderId);
-  if (order) {
-    order.status = status;
-    saveLocalOrders(orders);
     return true;
+  } catch (err) {
+    console.error('❌ Exception updating order status in Supabase:', err);
+    return false;
   }
-  return false;
 }
 
 // ==================== TRACKING ====================
 
 export async function addTrackingUpdate(update: Omit<TrackingUpdate, 'id' | 'created_at'>): Promise<TrackingUpdate | null> {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. addTrackingUpdate failed.');
+    return null;
+  }
+
   const newUpdate: TrackingUpdate = {
     ...update,
     id: 'track-' + Date.now().toString(36),
     created_at: new Date().toISOString(),
   };
 
-  if (isSupabaseConfigured && supabase) {
+  try {
     const { data, error } = await supabase
       .from('tracking_updates')
       .insert([newUpdate])
@@ -328,21 +310,24 @@ export async function addTrackingUpdate(update: Omit<TrackingUpdate, 'id' | 'cre
       .single();
 
     if (error) {
-      console.error('Error adding tracking update in Supabase:', error);
-    } else {
-      return data;
+      console.error('❌ Error adding tracking update in Supabase:', error);
+      return null;
     }
-  }
 
-  // Local storage fallback
-  const tracking = getLocalTracking();
-  tracking.push(newUpdate);
-  saveLocalTracking(tracking);
-  return newUpdate;
+    return data;
+  } catch (err) {
+    console.error('❌ Exception adding tracking update in Supabase:', err);
+    return null;
+  }
 }
 
 export async function getTrackingUpdates(orderId: string): Promise<TrackingUpdate[]> {
-  if (isSupabaseConfigured && supabase) {
+  if (!isSupabaseConfigured || !supabase) {
+    console.error('❌ Supabase is not configured. getTrackingUpdates failed.');
+    return [];
+  }
+
+  try {
     const { data, error } = await supabase
       .from('tracking_updates')
       .select('*')
@@ -350,21 +335,20 @@ export async function getTrackingUpdates(orderId: string): Promise<TrackingUpdat
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('Error fetching tracking updates from Supabase:', error);
-    } else {
-      return data || [];
+      console.error('❌ Error fetching tracking updates from Supabase:', error);
+      return [];
     }
-  }
 
-  // Local storage fallback
-  const tracking = getLocalTracking();
-  return tracking.filter(t => t.order_id === orderId);
+    return data || [];
+  } catch (err) {
+    console.error('❌ Exception fetching tracking updates from Supabase:', err);
+    return [];
+  }
 }
 
 // ==================== ADMIN AUTH ====================
 
 export async function adminLogin(email: string, password: string): Promise<boolean> {
-  // Simple admin check (in production, use Supabase Auth)
   return email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
 }
 
@@ -395,8 +379,6 @@ export async function testSupabaseConnection(): Promise<boolean> {
 
   try {
     console.log('🧪 Testing Supabase connection...');
-    
-    // Test 1: Try to select from products table
     const { data, error } = await supabase
       .from('products')
       .select('count', { count: 'exact' });
@@ -415,14 +397,6 @@ export async function testSupabaseConnection(): Promise<boolean> {
   }
 }
 
-// Run diagnostics on page load
 if (typeof window !== 'undefined') {
   (window as any).testSupabase = testSupabaseConnection;
-  (window as any).showSupabaseConfig = () => {
-    console.log('Supabase Config:', {
-      url: SUPABASE_URL,
-      keyLength: SUPABASE_ANON_KEY.length,
-      isConfigured: isSupabaseConfigured,
-    });
-  };
 }

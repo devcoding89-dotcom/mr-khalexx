@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
+import type { Product } from '@/types/database';
 import { Coins, Zap, Clock, Globe, Shield, Check, Sparkles, TrendingUp, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/ProductCard';
-import { getLocalProductsByCategory } from '@/data/localDatabase';
+import { getProductsByCategory } from '@/lib/supabase';
 import { useCartStore } from '@/store/cartStore';
 
 const WHATSAPP_NUMBER = '23481225541898';
 
 export default function CPPointsSection() {
   const [isVisible, setIsVisible] = useState(false);
+  const [cpProducts, setCpProducts] = useState<Product[]>([]);
   const sectionRef = useRef<HTMLElement>(null);
   const { addItem } = useCartStore();
 
@@ -31,7 +33,27 @@ export default function CPPointsSection() {
     return () => observer.disconnect();
   }, []);
 
-  const cpProducts = getLocalProductsByCategory('cp');
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadCPProducts() {
+      try {
+        const products = await getProductsByCategory('cp');
+        if (mounted) {
+          setCpProducts(products);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load CP products:', error);
+      }
+    }
+
+    loadCPProducts();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const popularPackage = cpProducts.find(p => p.is_bestseller);
 
   const openWhatsApp = () => {

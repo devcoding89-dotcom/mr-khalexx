@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Plus, Search, Edit2, Trash2, Upload, ImageIcon } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Upload, ImageIcon, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { useAdminStore } from '@/store/adminStore';
-import { createProduct, updateProduct, deleteProduct } from '@/lib/supabase';
+import { createProduct, updateProduct, deleteProduct, getAllProducts } from '@/lib/supabase';
 import type { Product, Category } from '@/types/database';
 
 const categories: { value: Category; label: string }[] = [
@@ -16,12 +16,13 @@ const categories: { value: Category; label: string }[] = [
 ];
 
 export default function ProductsManager() {
-  const { products, addProduct, updateProduct: updateProductInStore, removeProduct } = useAdminStore();
+  const { products, addProduct, updateProduct: updateProductInStore, removeProduct, setProducts } = useAdminStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -108,6 +109,21 @@ export default function ProductsManager() {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      const data = await getAllProducts();
+      setProducts(data);
+      console.log('✅ Products refreshed:', data.length);
+      alert(`✅ Refreshed! Found ${data.length} products`);
+    } catch (error) {
+      console.error('Error refreshing products:', error);
+      alert('Failed to refresh products. Check console for details.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image) {
@@ -181,16 +197,26 @@ export default function ProductsManager() {
             />
           </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={resetForm}
-              className="btn-primary hover:scale-105 transition-transform shadow-lg glow-gold"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Product
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-3">
+          <Button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            variant="outline"
+            className="border-white/10 hover:bg-white/5 text-gray-300 hover:text-white"
+          >
+            <RotateCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={resetForm}
+                className="btn-primary hover:scale-105 transition-transform shadow-lg glow-gold"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Product
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl bg-[#0f0f14] border-white/10 text-white max-h-[90vh] overflow-y-auto z-[100]">
             <DialogHeader>
               <DialogTitle className="text-white font-['Orbitron'] text-xl">
