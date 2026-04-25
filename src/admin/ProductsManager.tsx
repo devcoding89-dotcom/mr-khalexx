@@ -555,5 +555,6 @@ export default function ProductsManager() {
         )}
       </div>
     </div>
+    </div>
   );
 }

@@ -22,11 +22,11 @@ interface AdminState {
 
 export const useAdminStore = create<AdminState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       adminEmail: null,
-      products: [],
-      orders: [],
+      products: [], // Don't persist products
+      orders: [],   // Don't persist orders
       isLoading: false,
       
       login: (email: string) => {

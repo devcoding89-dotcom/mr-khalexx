@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 async function runMigration() {
   // Database connection string with URL-encoded password
   // The @ symbol in password needs to be encoded as %40
-  const connectionString = 'postgresql://postgres:Khaleed%40890@db.luxoncvjroafxvsylhjh.supabase.co:5432/postgres';
+  const connectionString = 'postgresql://postgres:CYBER%20AK890@db.luxoncvjroafxvsylhjh.supabase.co:5432/postgres';
 
   const client = new Client({ connectionString });
 
